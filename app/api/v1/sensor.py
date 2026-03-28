@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from app.models.sensor import SensorPayload
 from app.services.sensor_service import process_sensor_data
-from app.core.security import decrypt_payload
+from app.core.security import decrypt_value
 from app.store.memory_store import device_store
 from datetime import datetime
 
