@@ -73,6 +73,8 @@ def dashboard(request: Request):
                 <button onclick="loadDevices()">Connected Devices</button>
                 <button onclick="loadRecords()">View Records</button>
                 <button onclick="clearTerminal()">Clear Terminal</button>
+                <button onclick="clearRecords()">Clear Records (Realtime)</button>
+
 
                 <hr>
 
@@ -110,7 +112,9 @@ def dashboard(request: Request):
             document.getElementById("backend-url").innerText = baseUrl;
 
             // STREAM CONNECTION (REAL-TIME)
-            const evt = new EventSource("/api/v1/stream");
+            // Use absolute URL so iOS browsers don't break when page origin differs.
+            const evt = new EventSource(baseUrl + "/api/v1/stream");
+
 
             evt.onmessage = function(event) {{
                 const data = JSON.parse(event.data);
@@ -161,21 +165,37 @@ def dashboard(request: Request):
                 terminal.innerHTML = "";
             }}
 
+            // CLEAR RECORDS (Realtime / SSE source)
+            async function clearRecords() {{
+                try {{
+                    const res = await fetch('/api/v1/records', {{
+                        method: 'DELETE',
+                    }});
+                    const data = await res.json();
+                    document.getElementById("info").innerHTML =
+                        "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+                    log("> RECORDS CLEARED");
+                    terminal.innerHTML = "";
+                }} catch (err) {{
+                    log("> ERROR clearing records");
+                }}
+            }}
+
+
             // QR GENERATOR
+            // IMPORTANT: Frontend QRScanner expects RAW server URL string (must start with http/https).
             async function generateQR() {{
-                const payload = {{
-                    server: baseUrl,
-                    endpoint: baseUrl + "/api/v1/sensor"
-                }};
+                const qrData = baseUrl; // e.g. "http://localhost:8000" (NO JSON)
 
                 const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
-                    + encodeURIComponent(JSON.stringify(payload));
+                    + encodeURIComponent(qrData);
 
                 document.getElementById("qr").innerHTML =
                     `<img src="${{qrUrl}}" />`;
 
                 log("> QR GENERATED");
             }}
+
 
             // DECRYPT FUNCTION
             async function decrypt() {{
