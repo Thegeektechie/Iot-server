@@ -2,45 +2,49 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 import json
 import asyncio
-from app.store.memory_store import device_store
+from typing import Any, Dict
 
 router = APIRouter()
 
+# Queue-based SSE to avoid polling over deque indices (which can make streams unstable).
+# Each sensor POST pushes a single event dict into this queue.
+_sse_queue: asyncio.Queue[Dict[str, Any]] = asyncio.Queue()
+
+
+def push_sse_event(event: Dict[str, Any]) -> None:
+    """Push an event into the global SSE queue."""
+    try:
+        _sse_queue.put_nowait(event)
+    except asyncio.QueueFull:
+        # If a client is slow, drop events to keep the stream alive.
+        pass
+
 
 async def event_stream():
-    """
-    Real-time Server Sent Events stream
-    Non-blocking, efficient, and scalable
-    """
+    """Real-time Server Sent Events stream (queue-based + heartbeats)."""
 
-    last_index = {}
+    retry_ms = 2000
+    loop = asyncio.get_event_loop()
+    last_ping = loop.time()
 
     while True:
-        has_data = False
+        # Send heartbeat every ~15s so proxies/load balancers keep the connection.
+        now = loop.time()
+        if now - last_ping >= 15:
+            # Optional ping event helps clients/debug.
+            yield (
+                "event: ping\n"
+                f"data: {{\"ts\": {int(loop.time() * 1000)}}}\n\n"
+            )
+            yield f"retry: {retry_ms}\n\n"
+            last_ping = now
 
-        for device_id, records in device_store.store.items():
-            index = last_index.get(device_id, 0)
+        try:
+            event = await asyncio.wait_for(_sse_queue.get(), timeout=15.0)
+        except asyncio.TimeoutError:
+            continue
 
-            if index < len(records):
-                new_records = records[index:]
-
-                for record in new_records:
-                    payload = {
-                        "device": device_id,
-                        "record": record
-                    }
-
-                    yield f"data: {json.dumps(payload)}\n\n"
-                    has_data = True
-
-                last_index[device_id] = len(records)
-
-        # ⚡ If no new data, do short async sleep
-        if not has_data:
-            await asyncio.sleep(0.3)
-        else:
-            # faster loop when active
-            await asyncio.sleep(0.05)
+        yield f"data: {json.dumps(event)}\n\n"
 
 
 @router.get("/stream")
@@ -51,6 +55,7 @@ async def stream():
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"
-        }
+            "X-Accel-Buffering": "no",
+        },
     )
+

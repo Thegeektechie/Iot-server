@@ -4,10 +4,12 @@ from app.services.sensor_service import process_sensor_data
 from app.core.security import decrypt_value
 from app.core.logger import get_logger
 from app.store.memory_store import device_store
+from app.api.v1.stream import push_sse_event
 from datetime import datetime
 import json
 
 logger = get_logger(__name__)
+
 
 router = APIRouter()
 
@@ -36,6 +38,7 @@ async def receive_sensor_data(request: Request):
     try:
         body = await request.json()
         logger.info(f"Request body: {body}")
+
 
         decrypted_data = None
 
@@ -69,7 +72,9 @@ async def receive_sensor_data(request: Request):
             for k, v in incoming.items():
                 if isinstance(v, str):
                     try:
-                        plain = decrypt_value(v)  # backend AES-256-GCM expects this format
+                        # v is confirmed to be a string by the `isinstance(v, str)` guard.
+                        plain = decrypt_value(v)
+
 
                         # If decrypt_value returns a JSON string, parse it.
                         try:
@@ -130,6 +135,8 @@ async def receive_sensor_data(request: Request):
         # Store + metadata
         # ----------------------------
         device_store.store[device_id].append(record)
+        push_sse_event({"device": device_id, "record": record})
+
         device_store.store[device_id][-1]["last_seen"] = datetime.utcnow().isoformat()
 
         logger.info(
