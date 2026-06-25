@@ -84,11 +84,9 @@ def dashboard(request: Request):
 
                 <hr>
 
-                <h4>Decrypt Payload</h4>
-                <textarea id="encrypted" rows="3" placeholder="Paste encrypted payload here"></textarea>
-                <button onclick="decrypt()">Decrypt</button>
-
                 <div id="info"></div>
+
+
             </div>
 
             <!-- RIGHT PANEL -->
@@ -197,32 +195,7 @@ def dashboard(request: Request):
             }}
 
 
-            // DECRYPT FUNCTION
-            async function decrypt() {{
-                const encrypted = document.getElementById("encrypted").value;
 
-                if (!encrypted) {{
-                    log("> ERROR: No payload entered");
-                    return;
-                }}
-
-                try {{
-                    const res = await fetch('/api/v1/decrypt', {{
-                        method: 'POST',
-                        headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify({{ payload: encrypted }})
-                    }});
-
-                    const data = await res.json();
-
-                    document.getElementById("info").innerHTML =
-                        "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
-
-                    log("> PAYLOAD DECRYPTED");
-                }} catch (err) {{
-                    log("> ERROR decrypting payload");
-                }}
-            }}
 
         </script>
 
