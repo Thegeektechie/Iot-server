@@ -6,7 +6,8 @@ router = APIRouter()
 
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request):
-    return f"""
+    return """
+
     <html>
     <head>
         <title>IoT Command Center</title>
@@ -74,9 +75,10 @@ def dashboard(request: Request):
                 <button onclick="loadRecords()">View Records</button>
                 <button onclick="clearTerminal()">Clear Terminal</button>
                 <button onclick="clearRecords()">Clear Records (Realtime)</button>
-
+                <button onclick="decryptCurrentSession()">Decrypt Current Session</button>
 
                 <hr>
+
 
                 <h4>QR Builder</h4>
                 <button onclick="generateQR()">Generate QR</button>
@@ -179,11 +181,63 @@ def dashboard(request: Request):
                 }}
             }}
 
+            // STABLE PER-TAB SESSION (for /api/v1/decrypt)
+            // Stored in sessionStorage so it persists for the current browser tab/session.
+            const sessionId = (function(){
+                let v = sessionStorage.getItem('iot_session_id');
+                if (!v) {
+                    v = Math.random().toString(36).slice(2) + Date.now().toString(36);
+                    sessionStorage.setItem('iot_session_id', v);
+                }
+                return v;
+            })();
+
+
+
+
+            // DECRYPT CURRENT SESSION
+            async function decryptCurrentSession() {
+                const passcode = window.prompt('Enter passcode');
+
+                if (!passcode) {{
+                    log('> DECRYPT cancelled');
+                    return;
+                }}
+
+                try {{
+                    const res = await fetch('/api/v1/decrypt', {{
+                        method: 'POST',
+                        headers: {{
+                            'Content-Type': 'application/json',
+                            'x-session-id': sessionId,
+                        }},
+                        body: JSON.stringify({{ passcode, session_id: sessionId }}),
+                    }});
+
+                    const txt = await res.text();
+                    let data = null;
+                    try {{ data = JSON.parse(txt); }} catch {{}}
+
+                    if (!res.ok) {{
+                        log(`> DECRYPT ERROR: ${{txt}}`);
+                        return;
+                    }}
+
+                    document.getElementById('info').innerHTML =
+                        "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+
+                    log("> DECRYPT SUCCESS: decrypted_records=" + (data && data.decrypted_records ? data.decrypted_records : 'unknown'));
+
+                }} catch (err) {{
+                    log('> ERROR calling /api/v1/decrypt');
+                }}
+            }}
 
             // QR GENERATOR
             // IMPORTANT: Frontend QRScanner expects RAW server URL string (must start with http/https).
             async function generateQR() {{
                 const qrData = baseUrl; // e.g. "http://localhost:8000" (NO JSON)
+
 
                 const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
                     + encodeURIComponent(qrData);
