@@ -13,51 +13,51 @@ def dashboard(request: Request):
     <head>
         <title>IoT Command Center</title>
         <style>
-            body {{
+            body {
                 background: #000;
                 color: #00ff00;
                 font-family: monospace;
                 padding: 20px;
-            }}
+            }
 
-            .container {{
+            .container {
                 display: grid;
                 grid-template-columns: 1fr 2fr;
                 gap: 20px;
-            }}
+            }
 
-            .panel {{
+            .panel {
                 border: 1px solid #00ff00;
                 padding: 10px;
-            }}
+            }
 
-            button {{
+            button {
                 background: black;
                 color: #00ff00;
                 border: 1px solid #00ff00;
                 padding: 5px;
                 margin: 5px;
                 cursor: pointer;
-            }}
+            }
 
-            textarea {{
+            textarea {
                 width: 100%;
                 background: black;
                 color: #00ff00;
                 border: 1px solid #00ff00;
-            }}
+            }
 
-            #terminal {{
+            #terminal {
                 height: 400px;
                 overflow-y: auto;
                 white-space: pre-wrap;
-            }}
+            }
 
-            img {{
+            img {
                 margin-top: 10px;
-            }}
+            }
 
-            .modal {{
+            .modal {
                 display: none;
                 position: fixed;
                 z-index: 1;
@@ -67,9 +67,9 @@ def dashboard(request: Request):
                 height: 100%;
                 overflow: auto;
                 background-color: rgba(0, 0, 0, 0.4);
-            }}
+            }
 
-            .modal-content {{
+            .modal-content {
                 background-color: #000;
                 margin: 15% auto;
                 padding: 20px;
@@ -77,7 +77,7 @@ def dashboard(request: Request):
                 width: 80%;
                 max-width: 400px;
                 text-align: center;
-            }}
+            }
         </style>
     </head>
 
@@ -136,19 +136,19 @@ def dashboard(request: Request):
             const terminal = document.getElementById("terminal");
             const modal = document.getElementById('decryptModal');
 
-            function log(message) {{
+            function log(message) {
                 terminal.innerHTML += message + "\\n";
                 terminal.scrollTop = terminal.scrollHeight;
-            }}
+            }
 
-            function openDecryptModal() {{
+            function openDecryptModal() {
                 modal.style.display = 'block';
-            }}
+            }
 
-            function closeDecryptModal() {{
+            function closeDecryptModal() {
                 modal.style.display = 'none';
                 document.getElementById('passcodeInput').value = '';
-            }}
+            }
 
             // Backend URL
             const baseUrl = window.location.origin;
@@ -159,23 +159,23 @@ def dashboard(request: Request):
             const evt = new EventSource(baseUrl + "/api/v1/stream");
 
 
-            evt.onmessage = function(event) {{
+            evt.onmessage = function(event) {
                 const data = JSON.parse(event.data);
 
                 log(`
-> DEVICE: ${{data.device}}
-> TIME: ${{data.record.timestamp}}
-> DATA: ${{JSON.stringify(data.record.data, null, 2)}}
+> DEVICE: ${data.device}
+> TIME: ${data.record.timestamp}
+> DATA: ${JSON.stringify(data.record.data, null, 2)}
 ---------------------------`);
-            }};
+            };
 
-            evt.onerror = function() {{
+            evt.onerror = function() {
                 log("> STREAM ERROR: connection lost...");
-            }};
+            };
 
             // LOAD DEVICES
-            async function loadDevices() {{
-                try {{
+            async function loadDevices() {
+                try {
                     const res = await fetch('/api/v1/devices');
                     const data = await res.json();
 
@@ -183,14 +183,14 @@ def dashboard(request: Request):
                         "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
 
                     log("> DEVICES LOADED");
-                }} catch (err) {{
+                } catch (err) {
                     log("> ERROR loading devices");
-                }}
-            }}
+                }
+            }
 
             // LOAD RECORDS
-            async function loadRecords() {{
-                try {{
+            async function loadRecords() {
+                try {
                     const res = await fetch('/api/v1/records');
                     const data = await res.json();
 
@@ -198,87 +198,87 @@ def dashboard(request: Request):
                         "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
 
                     log("> RECORDS LOADED");
-                }} catch (err) {{
+                } catch (err) {
                     log("> ERROR loading records");
-                }}
-            }}
+                }
+            }
 
             // CLEAR TERMINAL
-            function clearTerminal() {{
+            function clearTerminal() {
                 terminal.innerHTML = "";
-            }}
+            }
 
             // CLEAR RECORDS (Realtime / SSE source)
-            async function clearRecords() {{
-                try {{
-                    const res = await fetch('/api/v1/records', {{
+            async function clearRecords() {
+                try {
+                    const res = await fetch('/api/v1/records', {
                         method: 'DELETE',
-                    }});
+                    });
                     const data = await res.json();
                     document.getElementById("info").innerHTML =
                         "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
                     log("> RECORDS CLEARED");
                     terminal.innerHTML = "";
-                }} catch (err) {{
+                } catch (err) {
                     log("> ERROR clearing records");
-                }}
-            }}
+                }
+            }
 
             // STABLE PER-TAB SESSION (for /api/v1/decrypt)
             // Stored in sessionStorage so it persists for the current browser tab/session.
-            const sessionId = (function(){{
+            const sessionId = (function(){
                 let v = sessionStorage.getItem('iot_session_id');
-                if (!v) {{
+                if (!v) {
                     v = Math.random().toString(36).slice(2) + Date.now().toString(36);
                     sessionStorage.setItem('iot_session_id', v);
-                }}
+                }
                 return v;
-            }})();
+            })();
 
 
 
 
             // DECRYPT CURRENT SESSION
-            async function decryptCurrentSession() {{
+            async function decryptCurrentSession() {
                 const passcode = document.getElementById('passcodeInput').value;
                 closeDecryptModal();
 
-                if (!passcode) {{
+                if (!passcode) {
                     log('> DECRYPT cancelled');
                     return;
-                }}
+                }
 
-                try {{
-                    const res = await fetch('/api/v1/decrypt', {{
+                try {
+                    const res = await fetch('/api/v1/decrypt', {
                         method: 'POST',
-                        headers: {{
+                        headers: {
                             'Content-Type': 'application/json',
                             'x-session-id': sessionId,
-                        }},
-                        body: JSON.stringify({{ passcode, session_id: sessionId }}),
-                    }});
+                        },
+                        body: JSON.stringify({ passcode, session_id: sessionId }),
+                    });
 
                     const txt = await res.text();
                     let data = null;
-                    try {{ data = JSON.parse(txt); }} catch {{}}
+                    try { data = JSON.parse(txt); } catch {}
 
-                    if (!res.ok) {{
-                        log(`> DECRYPT ERROR: ${{txt}}`);
+                    if (!res.ok) {
+                        log(`> DECRYPT ERROR: ${txt}`);
                         return;
-                    }}
+                    }
 
                     log('> DECRYPT SUCCESS:');
                     log(JSON.stringify(data, null, 2));
 
 
-                }} catch (err) {{
+                } catch (err) {
                     log('> ERROR calling /api/v1/decrypt');
-                }}
-            }}
+                }
+            }
 
             // QR GENERATOR
             // IMPORTANT: Frontend QRScanner expects RAW server URL string (must start with http/https).
-            async function generateQR() {{
+            async function generateQR() {
                 const qrData = baseUrl; // e.g. "http://localhost:8000" (NO JSON)
 
 
@@ -286,10 +286,10 @@ def dashboard(request: Request):
                     + encodeURIComponent(qrData);
 
                 document.getElementById("qr").innerHTML =
-                    `<img src="${{qrUrl}}" />`;
+                    `<img src="${qrUrl}" />`;
 
                 log("> QR GENERATED");
-            }}
+            }
 
 
 
