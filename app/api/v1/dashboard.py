@@ -8,6 +8,7 @@ router = APIRouter()
 def dashboard(request: Request):
     return """
 
+
     <html>
     <head>
         <title>IoT Command Center</title>
@@ -55,6 +56,28 @@ def dashboard(request: Request):
             img {{
                 margin-top: 10px;
             }}
+
+            .modal {{
+                display: none;
+                position: fixed;
+                z-index: 1;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                background-color: rgba(0, 0, 0, 0.4);
+            }}
+
+            .modal-content {{
+                background-color: #000;
+                margin: 15% auto;
+                padding: 20px;
+                border: 1px solid #00ff00;
+                width: 80%;
+                max-width: 400px;
+                text-align: center;
+            }}
         </style>
     </head>
 
@@ -75,7 +98,7 @@ def dashboard(request: Request):
                 <button onclick="loadRecords()">View Records</button>
                 <button onclick="clearTerminal()">Clear Terminal</button>
                 <button onclick="clearRecords()">Clear Records (Realtime)</button>
-                <button onclick="decryptCurrentSession()">Decrypt Current Session</button>
+                <button onclick="openDecryptModal()">Decrypt Current Session</button>
 
                 <hr>
 
@@ -99,12 +122,32 @@ def dashboard(request: Request):
 
         </div>
 
+        <div id="decryptModal" class="modal">
+            <div class="modal-content">
+                <h3>Decrypt Session</h3>
+                <p>Enter passcode to decrypt session data.</p>
+                <input type="password" id="passcodeInput" placeholder="Passcode" style="background: black; color: #00ff00; border: 1px solid #00ff00; padding: 5px; margin: 10px;">
+                <button onclick="decryptCurrentSession()">Decrypt</button>
+                <button onclick="closeDecryptModal()">Cancel</button>
+            </div>
+        </div>
+
         <script>
             const terminal = document.getElementById("terminal");
+            const modal = document.getElementById('decryptModal');
 
             function log(message) {{
                 terminal.innerHTML += message + "\\n";
                 terminal.scrollTop = terminal.scrollHeight;
+            }}
+
+            function openDecryptModal() {{
+                modal.style.display = 'block';
+            }}
+
+            function closeDecryptModal() {{
+                modal.style.display = 'none';
+                document.getElementById('passcodeInput').value = '';
             }}
 
             // Backend URL
@@ -183,21 +226,22 @@ def dashboard(request: Request):
 
             // STABLE PER-TAB SESSION (for /api/v1/decrypt)
             // Stored in sessionStorage so it persists for the current browser tab/session.
-            const sessionId = (function(){
+            const sessionId = (function(){{
                 let v = sessionStorage.getItem('iot_session_id');
-                if (!v) {
+                if (!v) {{
                     v = Math.random().toString(36).slice(2) + Date.now().toString(36);
                     sessionStorage.setItem('iot_session_id', v);
-                }
+                }}
                 return v;
-            })();
+            }})();
 
 
 
 
             // DECRYPT CURRENT SESSION
-            async function decryptCurrentSession() {
-                const passcode = window.prompt('Enter passcode');
+            async function decryptCurrentSession() {{
+                const passcode = document.getElementById('passcodeInput').value;
+                closeDecryptModal();
 
                 if (!passcode) {{
                     log('> DECRYPT cancelled');
@@ -223,10 +267,9 @@ def dashboard(request: Request):
                         return;
                     }}
 
-                    document.getElementById('info').innerHTML =
-                        "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+                    log('> DECRYPT SUCCESS:');
+                    log(JSON.stringify(data, null, 2));
 
-                    log("> DECRYPT SUCCESS: decrypted_records=" + (data && data.decrypted_records ? data.decrypted_records : 'unknown'));
 
                 }} catch (err) {{
                     log('> ERROR calling /api/v1/decrypt');
@@ -239,7 +282,7 @@ def dashboard(request: Request):
                 const qrData = baseUrl; // e.g. "http://localhost:8000" (NO JSON)
 
 
-                const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
+                const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data="
                     + encodeURIComponent(qrData);
 
                 document.getElementById("qr").innerHTML =
