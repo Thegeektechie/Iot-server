@@ -91,15 +91,5 @@ async def decrypt_current_session(request: Request):
     # clear session records after decrypt
     session_store.clear_session_records(session_id)
 
-    # Push updated records over SSE so the frontend re-renders.
-    # (We push the full last record for now; stream clients can also
-    # call /records if they need a complete refresh.)
-    if updated:
-        try:
-            from app.api.v1.stream import push_sse_event
-            push_sse_event({"device": device_id, "record": updated[-1]})
-        except Exception:
-            pass
-
-    return {"status": "success", "device": device_id, "decrypted_records": len(updated)}
+    return {"status": "success", "device": device_id, "decrypted_records": updated}
 

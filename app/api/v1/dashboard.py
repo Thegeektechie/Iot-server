@@ -268,8 +268,18 @@ def dashboard(request: Request):
                     }
 
                     log('> DECRYPT SUCCESS:');
-                    log(JSON.stringify(data, null, 2));
-
+                    if (data && data.decrypted_records && Array.isArray(data.decrypted_records)) {
+                        data.decrypted_records.forEach(item => {
+                            log(`
+> DEVICE: ${data.device} (DECRYPTED)
+> TIME: ${item.timestamp}
+> DECRYPTED_AT: ${item.decrypted_at}
+> DATA: ${JSON.stringify(item.data, null, 2)}
+---------------------------`);
+                        });
+                    } else {
+                        log(JSON.stringify(data, null, 2)); // fallback
+                    }
 
                 } catch (err) {
                     log('> ERROR calling /api/v1/decrypt');
